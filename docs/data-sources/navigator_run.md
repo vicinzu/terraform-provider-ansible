@@ -59,7 +59,8 @@ data "ansible_navigator_run" "artifact_query_file" {
 }
 
 output "resolv_conf" {
-  value = base64decode(jsondecode(data.ansible_navigator_run.artifact_query_file.artifact_queries.resolv_conf.results[0]))
+  value     = base64decode(jsondecode(data.ansible_navigator_run.artifact_query_file.artifact_queries.resolv_conf.results[0]))
+  sensitive = true
 }
 ```
 
@@ -120,7 +121,7 @@ Required:
 
 Read-Only:
 
-- `results` (List of String) Results of the `jq` filter in JSON format.
+- `results` (List of String, Sensitive) Results of the `jq` filter in JSON format. Marked sensitive since playbooks commonly read secrets; use `nonsensitive()` to reveal values known to be safe.
 
 
 <a id="nestedatt--execution_environment"></a>

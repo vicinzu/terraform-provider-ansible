@@ -107,7 +107,7 @@ Required:
 
 Read-Only:
 
-- `results` (List of String) Results of the `jq` filter in JSON format.
+- `results` (List of String, Sensitive) Results of the `jq` filter in JSON format. Marked sensitive since playbooks commonly read secrets; use `nonsensitive()` to reveal values known to be safe.
 
 
 <a id="nestedatt--execution_environment"></a>

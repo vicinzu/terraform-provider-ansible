@@ -56,6 +56,11 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 				ConfigVariables: testConfigVariables(t, config.Variables{
 					"file_contents": config.StringVariable(testString),
 				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectSensitiveValue(navigatorRunResource, tfjsonpath.New("artifact_queries").AtMapKey("file_contents").AtMapKey("results")),
+					},
+				},
 				ConfigStateChecks: []statecheck.StateCheck{
 					commandValueDiffer.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
 					statecheck.ExpectKnownValue(
@@ -75,6 +80,7 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
 						plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
+						plancheck.ExpectSensitiveValue(navigatorRunResource, tfjsonpath.New("artifact_queries").AtMapKey("file_contents").AtMapKey("results")),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{

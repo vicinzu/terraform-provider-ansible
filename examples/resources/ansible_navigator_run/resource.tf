@@ -130,7 +130,8 @@ resource "ansible_navigator_run" "artifact_query_stdout" {
 }
 
 output "playbook_stdout" {
-  value = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.results[0]))
+  value     = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.results[0]))
+  sensitive = true
 }
 
 # 10. ssh private keys

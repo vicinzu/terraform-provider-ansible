@@ -26,7 +26,8 @@ data "ansible_navigator_run" "test" {
 }
 
 output "file_contents" {
-  value = base64decode(jsondecode((data.ansible_navigator_run.test.artifact_queries.file_contents.results[0])))
+  value     = base64decode(jsondecode((data.ansible_navigator_run.test.artifact_queries.file_contents.results[0])))
+  sensitive = true
 }
 
 variable "file_contents" {

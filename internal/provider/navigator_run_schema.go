@@ -386,7 +386,7 @@ func privateKeyAttributes(target surface) map[string]schema.Attribute {
 func artifactQueryAttributes() map[string]schema.Attribute {
 	descriptions := map[string]attrDescription{
 		"jq_filter": describe("`jq` filter. Example: `.status, .stdout`."),
-		"results":   describe("Results of the `jq` filter in JSON format."),
+		"results":   describe("Results of the `jq` filter in JSON format. Marked sensitive since playbooks commonly read secrets; use `nonsensitive()` to reveal values known to be safe."),
 	}
 
 	return map[string]schema.Attribute{
@@ -402,6 +402,7 @@ func artifactQueryAttributes() map[string]schema.Attribute {
 			Description:         descriptions["results"].Description,
 			MarkdownDescription: descriptions["results"].MarkdownDescription,
 			Computed:            true,
+			Sensitive:           true,
 			ElementType:         jsontypes.NormalizedType{},
 			PlanModifiers: []planmodifier.List{
 				listplanmodifier.UseStateForUnknown(),

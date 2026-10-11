@@ -145,7 +145,8 @@ resource "ansible_navigator_run" "artifact_query_stdout" {
 }
 
 output "playbook_stdout" {
-  value = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.results[0]))
+  value     = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.results[0]))
+  sensitive = true
 }
 
 # 10. ssh private keys
@@ -308,7 +309,7 @@ Required:
 
 Read-Only:
 
-- `results` (List of String) Results of the `jq` filter in JSON format.
+- `results` (List of String, Sensitive) Results of the `jq` filter in JSON format. Marked sensitive since playbooks commonly read secrets; use `nonsensitive()` to reveal values known to be safe.
 
 
 <a id="nestedatt--execution_environment"></a>
