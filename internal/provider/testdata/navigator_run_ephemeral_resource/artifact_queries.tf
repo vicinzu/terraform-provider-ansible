@@ -23,12 +23,18 @@ ephemeral "ansible_navigator_run" "test" {
       jq_filter = ".plays[] | select(.name==\"Test\") | .tasks[] | select(.task==\"Get file\") | .res.content"
     }
   }
+  artifact_queries_sensitive = {
+    "file_contents" = {
+      jq_filter = ".plays[] | select(.name==\"Test\") | .tasks[] | select(.task==\"Get file\") | .res.content"
+    }
+  }
 }
 
 provider "echo" {
   data = {
-    ephemeral_resource = ephemeral.ansible_navigator_run.test
-    file_contents      = base64decode(jsondecode((ephemeral.ansible_navigator_run.test.artifact_queries.file_contents.results[0])))
+    ephemeral_resource      = ephemeral.ansible_navigator_run.test
+    file_contents           = base64decode(jsondecode((ephemeral.ansible_navigator_run.test.artifact_queries.file_contents.results[0])))
+    file_contents_sensitive = base64decode(jsondecode((ephemeral.ansible_navigator_run.test.artifact_queries_sensitive.file_contents.results[0])))
   }
 }
 

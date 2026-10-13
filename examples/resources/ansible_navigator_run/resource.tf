@@ -133,7 +133,22 @@ output "playbook_stdout" {
   value = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.results[0]))
 }
 
-# 10. ssh private keys
+# 10. sensitive artifact queries
+resource "ansible_navigator_run" "artifact_query_sensitive" {
+  playbook  = "# example"
+  inventory = yamlencode({})
+  artifact_queries_sensitive = {
+    "token" = {
+      jq_filter = <<-EOT
+      .plays[] | select(.name=="Example") |
+      .tasks[] | select(.task=="Read token") |
+      .res.content
+      EOT
+    }
+  }
+}
+
+# 11. ssh private keys
 resource "tls_private_key" "client" {
   algorithm = "ED25519"
 }
@@ -151,7 +166,7 @@ resource "ansible_navigator_run" "private_keys" {
   }
 }
 
-# 11. ssh known hosts
+# 12. ssh known hosts
 resource "tls_private_key" "server" {
   algorithm = "ED25519"
 }
@@ -172,7 +187,7 @@ resource "ansible_navigator_run" "known_hosts" {
   }
 }
 
-# 12. compare previous inventory with current inventory
+# 13. compare previous inventory with current inventory
 resource "ansible_navigator_run" "compare_inventory" {
   playbook = <<-EOT
   - hosts: all

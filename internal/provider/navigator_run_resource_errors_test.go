@@ -63,6 +63,10 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 			expected: regexp.MustCompile("Playbook artifact query failed"),
 		},
 		{
+			name:     "artifact_query_sensitive_runtime",
+			expected: regexp.MustCompile(`(?s)Playbook artifact query failed.*"sensitive_runtime" = \{`),
+		},
+		{
 			name:     "env_var_name_empty",
 			expected: regexp.MustCompile(`must(\s)not(\s)be(\s)empty`),
 		},

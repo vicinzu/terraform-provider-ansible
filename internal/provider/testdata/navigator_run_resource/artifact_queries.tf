@@ -27,10 +27,24 @@ resource "ansible_navigator_run" "test" {
       EOT
     }
   }
+  artifact_queries_sensitive = {
+    "file_contents" = {
+      jq_filter = <<-EOT
+      .plays[] | select(.name=="Test") |
+      .tasks[] | select(.task=="Get file") |
+      .res.content
+      EOT
+    }
+  }
 }
 
 output "file_contents" {
   value = base64decode(jsondecode(ansible_navigator_run.test.artifact_queries.file_contents.results[0]))
+}
+
+output "file_contents_sensitive" {
+  value     = base64decode(jsondecode(ansible_navigator_run.test.artifact_queries_sensitive.file_contents.results[0]))
+  sensitive = true
 }
 
 variable "file_contents" {

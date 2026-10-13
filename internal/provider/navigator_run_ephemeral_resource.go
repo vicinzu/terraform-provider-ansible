@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
 
 var (
@@ -22,10 +21,11 @@ var (
 type NavigatorRunEphemeralResourceModel struct {
 	NavigatorRunCommonModel
 
-	ArtifactQueries types.Map      `tfsdk:"artifact_queries"`
-	ID              types.String   `tfsdk:"id"`
-	Command         types.String   `tfsdk:"command"`
-	Timeouts        timeouts.Value `tfsdk:"timeouts"`
+	ArtifactQueries          types.Map      `tfsdk:"artifact_queries"`
+	ArtifactQueriesSensitive types.Map      `tfsdk:"artifact_queries_sensitive"`
+	ID                       types.String   `tfsdk:"id"`
+	Command                  types.String   `tfsdk:"command"`
+	Timeouts                 timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (m NavigatorRunEphemeralResourceModel) Value(ctx context.Context, opts *providerOptions, runData *navigatorRunData) diag.Diagnostics {
@@ -38,23 +38,13 @@ func (m NavigatorRunEphemeralResourceModel) Value(ctx context.Context, opts *pro
 
 	diags.Append(runData.Load(ctx, m.NavigatorRunCommonModel)...)
 
-	var queriesModel map[string]ArtifactQueryModel
-	diags.Append(m.ArtifactQueries.ElementsAs(ctx, &queriesModel, false)...)
-
-	runData.userArtifactQueries = true
-	runData.playbookArtifactQueries = map[string]ansible.PlaybookArtifactQuery{}
-	for name, model := range queriesModel {
-		var query ansible.PlaybookArtifactQuery
-
-		diags.Append(model.Value(ctx, &query)...)
-		runData.playbookArtifactQueries[name] = query
-	}
+	diags.Append(runData.LoadArtifactQueries(ctx, m.ArtifactQueries, m.ArtifactQueriesSensitive)...)
 
 	return diags
 }
 
 func (m *NavigatorRunEphemeralResourceModel) Set(ctx context.Context, run navigatorRunData) diag.Diagnostics {
-	return run.Store(ctx, &m.Command, &m.AnsibleOptions, &m.ArtifactQueries)
+	return run.Store(ctx, &m.Command, &m.AnsibleOptions, &m.ArtifactQueries, &m.ArtifactQueriesSensitive)
 }
 
 type NavigatorRunEphemeralResource struct {

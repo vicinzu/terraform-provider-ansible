@@ -26,13 +26,14 @@ var (
 type NavigatorRunResourceModel struct {
 	NavigatorRunCommonModel
 
-	RunOnDestroy    types.Bool     `tfsdk:"run_on_destroy"`
-	DestroyPlaybook types.String   `tfsdk:"destroy_playbook"`
-	Triggers        types.Object   `tfsdk:"triggers"`
-	ArtifactQueries types.Map      `tfsdk:"artifact_queries"`
-	ID              types.String   `tfsdk:"id"`
-	Command         types.String   `tfsdk:"command"`
-	Timeouts        timeouts.Value `tfsdk:"timeouts"`
+	RunOnDestroy             types.Bool     `tfsdk:"run_on_destroy"`
+	DestroyPlaybook          types.String   `tfsdk:"destroy_playbook"`
+	Triggers                 types.Object   `tfsdk:"triggers"`
+	ArtifactQueries          types.Map      `tfsdk:"artifact_queries"`
+	ArtifactQueriesSensitive types.Map      `tfsdk:"artifact_queries_sensitive"`
+	ID                       types.String   `tfsdk:"id"`
+	Command                  types.String   `tfsdk:"command"`
+	Timeouts                 timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (m NavigatorRunResourceModel) Value(ctx context.Context, destroy bool, opts *providerOptions, runs uint32, previousInventory *string, runData *navigatorRunData) diag.Diagnostics {
@@ -53,23 +54,13 @@ func (m NavigatorRunResourceModel) Value(ctx context.Context, destroy bool, opts
 		runData.config.Inventories = append(runData.config.Inventories, ansible.Inventory{Name: navigatorRunPrevInventoryName, Contents: *previousInventory, Exclude: true})
 	}
 
-	var queriesModel map[string]ArtifactQueryModel
-	diags.Append(m.ArtifactQueries.ElementsAs(ctx, &queriesModel, false)...)
-
-	runData.userArtifactQueries = true
-	runData.playbookArtifactQueries = map[string]ansible.PlaybookArtifactQuery{}
-	for name, model := range queriesModel {
-		var query ansible.PlaybookArtifactQuery
-
-		diags.Append(model.Value(ctx, &query)...)
-		runData.playbookArtifactQueries[name] = query
-	}
+	diags.Append(runData.LoadArtifactQueries(ctx, m.ArtifactQueries, m.ArtifactQueriesSensitive)...)
 
 	return diags
 }
 
 func (m *NavigatorRunResourceModel) Set(ctx context.Context, run navigatorRunData) diag.Diagnostics {
-	return run.Store(ctx, &m.Command, &m.AnsibleOptions, &m.ArtifactQueries)
+	return run.Store(ctx, &m.Command, &m.AnsibleOptions, &m.ArtifactQueries, &m.ArtifactQueriesSensitive)
 }
 
 func (m *NavigatorRunResourceModel) Trigger(name string) attr.Value { //nolint:ireturn
@@ -94,6 +85,7 @@ func (m *NavigatorRunResourceModel) ShouldRun(state *NavigatorRunResourceModel) 
 		m.Timezone.Equal(state.Timezone),
 		m.Trigger("run").Equal(state.Trigger("run")),
 		m.ArtifactQueries.Equal(state.ArtifactQueries),
+		m.ArtifactQueriesSensitive.Equal(state.ArtifactQueriesSensitive),
 	}
 
 	return slices.Contains(unchanged, false)
@@ -137,7 +129,6 @@ func (r *NavigatorRunResource) Configure(_ context.Context, req resource.Configu
 	r.opts = opts
 }
 
-//nolint:cyclop
 func (r *NavigatorRunResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	var data, state *NavigatorRunResourceModel
 
@@ -188,17 +179,8 @@ func (r *NavigatorRunResource) ModifyPlan(ctx context.Context, req resource.Modi
 
 	data.Command = types.StringUnknown()
 
-	var artifactQueriesPlanModel map[string]ArtifactQueryModel
-	resp.Diagnostics.Append(data.ArtifactQueries.ElementsAs(ctx, &artifactQueriesPlanModel, false)...)
-
-	for name, model := range artifactQueriesPlanModel {
-		model.Results = types.ListUnknown(types.StringType)
-		artifactQueriesPlanModel[name] = model
-	}
-
-	artifactQueriesPlanValue, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.AttrTypes()}, artifactQueriesPlanModel)
-	resp.Diagnostics.Append(newDiags...)
-	data.ArtifactQueries = artifactQueriesPlanValue
+	resp.Diagnostics.Append(artifactQueriesUnknownResults(ctx, &data.ArtifactQueries)...)
+	resp.Diagnostics.Append(artifactQueriesUnknownResults(ctx, &data.ArtifactQueriesSensitive)...)
 }
 
 func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

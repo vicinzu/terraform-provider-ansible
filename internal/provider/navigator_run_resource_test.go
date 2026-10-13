@@ -56,6 +56,11 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 				ConfigVariables: testConfigVariables(t, config.Variables{
 					"file_contents": config.StringVariable(testString),
 				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectSensitiveValue(navigatorRunResource, tfjsonpath.New("artifact_queries_sensitive").AtMapKey("file_contents").AtMapKey("results")),
+					},
+				},
 				ConfigStateChecks: []statecheck.StateCheck{
 					commandValueDiffer.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
 					statecheck.ExpectKnownValue(
@@ -64,6 +69,7 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 						knownvalue.StringRegexp(regexp.MustCompile("ok=2")),
 					),
 					statecheck.ExpectKnownOutputValue("file_contents", knownvalue.StringExact(testString)),
+					statecheck.ExpectKnownOutputValue("file_contents_sensitive", knownvalue.StringExact(testString)),
 				},
 			},
 			{
@@ -75,6 +81,7 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
 						plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
+						plancheck.ExpectSensitiveValue(navigatorRunResource, tfjsonpath.New("artifact_queries_sensitive").AtMapKey("file_contents").AtMapKey("results")),
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -85,6 +92,7 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 						knownvalue.StringRegexp(regexp.MustCompile("ok=2")),
 					),
 					statecheck.ExpectKnownOutputValue("file_contents", knownvalue.StringExact(testUpdateString)),
+					statecheck.ExpectKnownOutputValue("file_contents_sensitive", knownvalue.StringExact(testUpdateString)),
 				},
 			},
 		},
@@ -112,6 +120,7 @@ func TestAccNavigatorRunResource_basic(t *testing.T) {
 					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("run_on_destroy"), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("triggers"), knownvalue.Null()),
 					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("artifact_queries"), knownvalue.Null()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("artifact_queries_sensitive"), knownvalue.Null()),
 					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("id"), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("command"), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("timeouts"), knownvalue.Null()),

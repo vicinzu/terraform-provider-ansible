@@ -63,6 +63,7 @@ resource "vault_kv_secret_v2" "example" {
 - `ansible_navigator_binary` (String) Path to the `ansible-navigator` binary. By default `$PATH` is searched.
 - `ansible_options` (Attributes) Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration. (see [below for nested schema](#nestedatt--ansible_options))
 - `artifact_queries` (Attributes Map) Query the Ansible playbook artifact with [`jq`](https://jqlang.github.io/jq/) syntax. The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
+- `artifact_queries_sensitive` (Attributes Map) Same as `artifact_queries`, but `results` are marked as sensitive. (see [below for nested schema](#nestedatt--artifact_queries_sensitive))
 - `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 - `timezone` (String) IANA time zone, use `local` for the system time zone. Defaults to `UTC`.
@@ -108,6 +109,18 @@ Required:
 Read-Only:
 
 - `results` (List of String) Results of the `jq` filter in JSON format.
+
+
+<a id="nestedatt--artifact_queries_sensitive"></a>
+### Nested Schema for `artifact_queries_sensitive`
+
+Required:
+
+- `jq_filter` (String) `jq` filter. Example: `.status, .stdout`.
+
+Read-Only:
+
+- `results` (List of String, Sensitive) Results of the `jq` filter in JSON format.
 
 
 <a id="nestedatt--execution_environment"></a>
