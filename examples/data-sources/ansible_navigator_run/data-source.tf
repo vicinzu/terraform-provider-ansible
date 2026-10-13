@@ -42,6 +42,5 @@ data "ansible_navigator_run" "artifact_query_file" {
 }
 
 output "resolv_conf" {
-  value     = base64decode(jsondecode(data.ansible_navigator_run.artifact_query_file.artifact_queries.resolv_conf.results[0]))
-  sensitive = true
+  value = base64decode(jsondecode(data.ansible_navigator_run.artifact_query_file.artifact_queries.resolv_conf.results[0]))
 }

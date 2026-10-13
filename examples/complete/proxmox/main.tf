@@ -147,6 +147,5 @@ resource "ansible_navigator_run" "this" {
 }
 
 output "playbook_stdout" {
-  value     = join("\n", jsondecode(ansible_navigator_run.this.artifact_queries.stdout.results[0]))
-  sensitive = true
+  value = join("\n", jsondecode(ansible_navigator_run.this.artifact_queries.stdout.results[0]))
 }

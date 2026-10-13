@@ -24,6 +24,5 @@ variable "pull_args" {
 }
 
 output "pull_arg" {
-  value     = jsondecode(ansible_navigator_run.test.artifact_queries.pull_args.results[0])[0]
-  sensitive = true
+  value = jsondecode(ansible_navigator_run.test.artifact_queries.pull_args.results[0])[0]
 }

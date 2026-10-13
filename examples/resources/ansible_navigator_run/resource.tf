@@ -130,8 +130,22 @@ resource "ansible_navigator_run" "artifact_query_stdout" {
 }
 
 output "playbook_stdout" {
-  value     = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.results[0]))
-  sensitive = true
+  value = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.results[0]))
+}
+
+# artifact_queries_sensitive -- results are hidden from CLI output, for queries that may return secrets
+resource "ansible_navigator_run" "artifact_query_sensitive" {
+  playbook  = "# example"
+  inventory = yamlencode({})
+  artifact_queries_sensitive = {
+    "token" = {
+      jq_filter = <<-EOT
+      .plays[] | select(.name=="Example") |
+      .tasks[] | select(.task=="Read token") |
+      .res.content
+      EOT
+    }
+  }
 }
 
 # 10. ssh private keys

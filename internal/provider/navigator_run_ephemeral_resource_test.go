@@ -54,6 +54,11 @@ func TestAccNavigatorRunEphemeralResource_artifact_queries(t *testing.T) {
 						tfjsonpath.New("data").AtMapKey("file_contents"),
 						knownvalue.StringExact(testString),
 					),
+					statecheck.ExpectKnownValue(
+						"echo.first_test",
+						tfjsonpath.New("data").AtMapKey("file_contents_sensitive"),
+						knownvalue.StringExact(testString),
+					),
 				},
 			},
 			{
@@ -80,6 +85,11 @@ func TestAccNavigatorRunEphemeralResource_artifact_queries(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"echo.second_test",
 						tfjsonpath.New("data").AtMapKey("file_contents"),
+						knownvalue.StringExact(testUpdateString),
+					),
+					statecheck.ExpectKnownValue(
+						"echo.second_test",
+						tfjsonpath.New("data").AtMapKey("file_contents_sensitive"),
 						knownvalue.StringExact(testUpdateString),
 					),
 				},
@@ -111,6 +121,7 @@ func TestAccNavigatorRunEphemeralResource_basic(t *testing.T) {
 					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("ansible_options"), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("timezone"), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("artifact_queries"), knownvalue.Null()),
+					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("artifact_queries_sensitive"), knownvalue.Null()),
 					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("id"), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("command"), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("timeouts"), knownvalue.Null()),

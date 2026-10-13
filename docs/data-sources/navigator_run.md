@@ -59,8 +59,7 @@ data "ansible_navigator_run" "artifact_query_file" {
 }
 
 output "resolv_conf" {
-  value     = base64decode(jsondecode(data.ansible_navigator_run.artifact_query_file.artifact_queries.resolv_conf.results[0]))
-  sensitive = true
+  value = base64decode(jsondecode(data.ansible_navigator_run.artifact_query_file.artifact_queries.resolv_conf.results[0]))
 }
 ```
 
@@ -77,6 +76,7 @@ output "resolv_conf" {
 - `ansible_navigator_binary` (String) Path to the `ansible-navigator` binary. By default `$PATH` is searched.
 - `ansible_options` (Attributes) Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration. (see [below for nested schema](#nestedatt--ansible_options))
 - `artifact_queries` (Attributes Map) Query the Ansible playbook artifact with [`jq`](https://jqlang.github.io/jq/) syntax. The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
+- `artifact_queries_sensitive` (Attributes Map) Same as `artifact_queries`, except `results` are marked [sensitive](https://developer.hashicorp.com/terraform/language/values/outputs#sensitive-suppressing-values-in-cli-output) and hidden from CLI output. Recommended for queries that may return secrets read by the playbook. (see [below for nested schema](#nestedatt--artifact_queries_sensitive))
 - `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 - `timezone` (String) IANA time zone, use `local` for the system time zone. Defaults to `UTC`.
@@ -121,7 +121,19 @@ Required:
 
 Read-Only:
 
-- `results` (List of String, Sensitive) Results of the `jq` filter in JSON format. Marked sensitive since playbooks commonly read secrets; use `nonsensitive()` to reveal values known to be safe.
+- `results` (List of String) Results of the `jq` filter in JSON format.
+
+
+<a id="nestedatt--artifact_queries_sensitive"></a>
+### Nested Schema for `artifact_queries_sensitive`
+
+Required:
+
+- `jq_filter` (String) `jq` filter. Example: `.status, .stdout`.
+
+Read-Only:
+
+- `results` (List of String, Sensitive) Results of the `jq` filter in JSON format.
 
 
 <a id="nestedatt--execution_environment"></a>

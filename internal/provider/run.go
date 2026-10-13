@@ -36,6 +36,11 @@ const (
 	defaultNavigatorRunOnDestroy       = false
 )
 
+const (
+	artifactQueriesAttribute          = "artifact_queries"
+	artifactQueriesSensitiveAttribute = "artifact_queries_sensitive"
+)
+
 type (
 	getKey func(ctx context.Context, key string) ([]byte, diag.Diagnostics)
 	setKey func(ctx context.Context, key string, value []byte) diag.Diagnostics
@@ -75,14 +80,15 @@ func incrementRuns(ctx context.Context, diags *diag.Diagnostics, getKey getKey, 
 }
 
 type navigatorRunData struct {
-	hostDir                 string
-	config                  navigator.RunConfig
-	operation               terraformOp
-	persistDir              bool
-	playbookArtifactQueries map[string]ansible.PlaybookArtifactQuery
-	userArtifactQueries     bool
-	knownHosts              []ansible.KnownHost
-	command                 string
+	hostDir                          string
+	config                           navigator.RunConfig
+	operation                        terraformOp
+	persistDir                       bool
+	playbookArtifactQueries          map[string]ansible.PlaybookArtifactQuery
+	playbookArtifactQueriesSensitive map[string]ansible.PlaybookArtifactQuery
+	userArtifactQueries              bool
+	knownHosts                       []ansible.KnownHost
+	command                          string
 }
 
 func (rd *navigatorRunData) Load(ctx context.Context, common NavigatorRunCommonModel) diag.Diagnostics {
@@ -138,7 +144,21 @@ func (rd *navigatorRunData) Load(ctx context.Context, common NavigatorRunCommonM
 	return diags
 }
 
-func (rd navigatorRunData) Store(ctx context.Context, command *types.String, ansibleOpts *types.Object, artifactQueries *types.Map) diag.Diagnostics {
+func (rd *navigatorRunData) LoadArtifactQueries(ctx context.Context, artifactQueries types.Map, artifactQueriesSensitive types.Map) diag.Diagnostics {
+	var diags, newDiags diag.Diagnostics
+
+	rd.userArtifactQueries = true
+
+	rd.playbookArtifactQueries, newDiags = artifactQueriesValue(ctx, artifactQueries)
+	diags.Append(newDiags...)
+
+	rd.playbookArtifactQueriesSensitive, newDiags = artifactQueriesValue(ctx, artifactQueriesSensitive)
+	diags.Append(newDiags...)
+
+	return diags
+}
+
+func (rd navigatorRunData) Store(ctx context.Context, command *types.String, ansibleOpts *types.Object, artifactQueries *types.Map, artifactQueriesSensitive *types.Map) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	*command = types.StringValue(rd.command)
@@ -151,27 +171,86 @@ func (rd navigatorRunData) Store(ctx context.Context, command *types.String, ans
 	diags.Append(newDiags...)
 	*ansibleOpts = optsResults
 
+	diags.Append(artifactQueriesSet(ctx, artifactQueries, rd.playbookArtifactQueries)...)
+	diags.Append(artifactQueriesSet(ctx, artifactQueriesSensitive, rd.playbookArtifactQueriesSensitive)...)
+
+	return diags
+}
+
+func artifactQueriesValue(ctx context.Context, value types.Map) (map[string]ansible.PlaybookArtifactQuery, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
 	var queriesModel map[string]ArtifactQueryModel
-	diags.Append(artifactQueries.ElementsAs(ctx, &queriesModel, false)...)
+	diags.Append(value.ElementsAs(ctx, &queriesModel, false)...)
+
+	queries := make(map[string]ansible.PlaybookArtifactQuery, len(queriesModel))
+	for name, model := range queriesModel {
+		var query ansible.PlaybookArtifactQuery
+
+		diags.Append(model.Value(ctx, &query)...)
+		queries[name] = query
+	}
+
+	return queries, diags
+}
+
+func artifactQueriesSet(ctx context.Context, value *types.Map, queries map[string]ansible.PlaybookArtifactQuery) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	var queriesModel map[string]ArtifactQueryModel
+	diags.Append(value.ElementsAs(ctx, &queriesModel, false)...)
 
 	for name, model := range queriesModel {
-		diags.Append(model.Set(ctx, rd.playbookArtifactQueries[name])...)
+		diags.Append(model.Set(ctx, queries[name])...)
 		queriesModel[name] = model
 	}
 
 	queriesValue, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.AttrTypes()}, queriesModel)
 	diags.Append(newDiags...)
-	*artifactQueries = queriesValue
+	*value = queriesValue
 
 	return diags
 }
 
-func (rd navigatorRunData) artifactQueryPath(name string) path.Path {
+func artifactQueriesUnknownResults(ctx context.Context, value *types.Map) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	var queriesModel map[string]ArtifactQueryModel
+	diags.Append(value.ElementsAs(ctx, &queriesModel, false)...)
+
+	for name, model := range queriesModel {
+		model.Results = types.ListUnknown(types.StringType)
+		queriesModel[name] = model
+	}
+
+	queriesValue, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.AttrTypes()}, queriesModel)
+	diags.Append(newDiags...)
+	*value = queriesValue
+
+	return diags
+}
+
+func (rd navigatorRunData) artifactQueryPath(attribute string, name string) path.Path {
 	if !rd.userArtifactQueries {
 		return path.Empty()
 	}
 
-	return path.Root("artifact_queries").AtMapKey(name)
+	return path.Root(attribute).AtMapKey(name)
+}
+
+func queryArtifact(diags *diag.Diagnostics, navRun *navigator.Run, runData *navigatorRunData, attribute string, queries map[string]ansible.PlaybookArtifactQuery) {
+	if err := navRun.Query(queries); err != nil {
+		for _, queryErr := range unwrapJoinedErrors(err) {
+			var typed *navigator.QueryError
+			if errors.As(queryErr, &typed) {
+				addPathError(diags, runData.artifactQueryPath(attribute, typed.Name), "Playbook artifact query failed", typed)
+
+				continue
+			}
+
+			addError(diags, "Playbook artifact queries failed", queryErr)
+		}
+	}
 }
 
 func preflightCheckPath(check navigator.PreflightCheck) path.Path {
@@ -287,17 +366,10 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 
 	tflog.Trace(ctx, "querying playbook artifact")
 
-	if err := navRun.Query(runData.playbookArtifactQueries); err != nil {
-		for _, queryErr := range unwrapJoinedErrors(err) {
-			var typed *navigator.QueryError
-			if errors.As(queryErr, &typed) {
-				addPathError(diags, runData.artifactQueryPath(typed.Name), "Playbook artifact query failed", typed)
+	queryArtifact(diags, navRun, runData, artifactQueriesAttribute, runData.playbookArtifactQueries)
 
-				continue
-			}
-
-			addError(diags, "Playbook artifact queries failed", queryErr)
-		}
+	if len(runData.playbookArtifactQueriesSensitive) > 0 {
+		queryArtifact(diags, navRun, runData, artifactQueriesSensitiveAttribute, runData.playbookArtifactQueriesSensitive)
 	}
 
 	if runData.config.UseKnownHosts {

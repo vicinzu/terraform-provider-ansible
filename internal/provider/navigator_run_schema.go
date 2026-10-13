@@ -67,15 +67,16 @@ func environmentVariablesSetDescription(target surface) attrDescription {
 
 func navigatorRunAttributes(target surface) map[string]schema.Attribute {
 	descriptions := map[string]attrDescription{
-		"playbook":                 playbookDescription(),
-		"working_directory":        describe("Directory in which `%s` runs. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc. Defaults to `%s`.", navigator.Program, defaultNavigatorRunWorkingDir),
-		"execution_environment":    describe("[Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration."),
-		"ansible_navigator_binary": describe("Path to the `%s` binary. By default `$PATH` is searched.", navigator.Program),
-		"ansible_options":          describe("Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration."),
-		"timezone":                 describe("IANA time zone, use `local` for the system time zone. Defaults to `%s`.", defaultNavigatorRunTimezone),
-		"artifact_queries":         describe("Query the Ansible playbook artifact with [`jq`](https://jqlang.github.io/jq/) syntax. The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run."),
-		"id":                       describe("UUID."),
-		"command":                  describe("Generated `%s` run command. Useful for troubleshooting.", navigator.Program),
+		"playbook":                   playbookDescription(),
+		"working_directory":          describe("Directory in which `%s` runs. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc. Defaults to `%s`.", navigator.Program, defaultNavigatorRunWorkingDir),
+		"execution_environment":      describe("[Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration."),
+		"ansible_navigator_binary":   describe("Path to the `%s` binary. By default `$PATH` is searched.", navigator.Program),
+		"ansible_options":            describe("Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration."),
+		"timezone":                   describe("IANA time zone, use `local` for the system time zone. Defaults to `%s`.", defaultNavigatorRunTimezone),
+		"artifact_queries":           describe("Query the Ansible playbook artifact with [`jq`](https://jqlang.github.io/jq/) syntax. The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run."),
+		"artifact_queries_sensitive": describe("Same as `artifact_queries`, except `results` are marked [sensitive](https://developer.hashicorp.com/terraform/language/values/outputs#sensitive-suppressing-values-in-cli-output) and hidden from CLI output. Recommended for queries that may return secrets read by the playbook."),
+		"id":                         describe("UUID."),
+		"command":                    describe("Generated `%s` run command. Useful for troubleshooting.", navigator.Program),
 	}
 
 	attributes := map[string]schema.Attribute{
@@ -154,7 +155,15 @@ func navigatorRunAttributes(target surface) map[string]schema.Attribute {
 				MarkdownDescription: descriptions["artifact_queries"].MarkdownDescription,
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
-					Attributes: artifactQueryAttributes(),
+					Attributes: artifactQueryAttributes(false),
+				},
+			},
+			"artifact_queries_sensitive": schema.MapNestedAttribute{
+				Description:         descriptions["artifact_queries_sensitive"].Description,
+				MarkdownDescription: descriptions["artifact_queries_sensitive"].MarkdownDescription,
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: artifactQueryAttributes(true),
 				},
 			},
 			"id": schema.StringAttribute{
@@ -383,10 +392,10 @@ func privateKeyAttributes(target surface) map[string]schema.Attribute {
 	}
 }
 
-func artifactQueryAttributes() map[string]schema.Attribute {
+func artifactQueryAttributes(sensitive bool) map[string]schema.Attribute {
 	descriptions := map[string]attrDescription{
 		"jq_filter": describe("`jq` filter. Example: `.status, .stdout`."),
-		"results":   describe("Results of the `jq` filter in JSON format. Marked sensitive since playbooks commonly read secrets; use `nonsensitive()` to reveal values known to be safe."),
+		"results":   describe("Results of the `jq` filter in JSON format."),
 	}
 
 	return map[string]schema.Attribute{
@@ -402,7 +411,7 @@ func artifactQueryAttributes() map[string]schema.Attribute {
 			Description:         descriptions["results"].Description,
 			MarkdownDescription: descriptions["results"].MarkdownDescription,
 			Computed:            true,
-			Sensitive:           true,
+			Sensitive:           sensitive,
 			ElementType:         jsontypes.NormalizedType{},
 			PlanModifiers: []planmodifier.List{
 				listplanmodifier.UseStateForUnknown(),

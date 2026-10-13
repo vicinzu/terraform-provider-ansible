@@ -39,8 +39,7 @@ resource "ansible_navigator_run" "test" {
 }
 
 output "previous_hosts" {
-  value     = jsondecode(ansible_navigator_run.test.artifact_queries.previous_hosts.results[0])
-  sensitive = true
+  value = jsondecode(ansible_navigator_run.test.artifact_queries.previous_hosts.results[0])
 }
 
 variable "inventory_file" {
